@@ -1,0 +1,6 @@
+# pip install git+https://github.com/dolfies/discord.py-self.git --upgrade
+fastapi
+uvicorn
+python-multipart
+aiohttp
+#discord.py-self

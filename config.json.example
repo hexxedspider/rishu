@@ -1,0 +1,26 @@
+{
+    "accounts": [
+        {
+            "name": "placeholder",
+            "token": "placeholder",
+            "prefix": ",",
+            "settings": {
+                "autoleave": false,
+                "autoreact": false
+            }
+        },
+        {
+            "name": "placeholder",
+            "token": "placeholder",
+            "prefix": ",",
+            "settings": {
+                "autoleave": false,
+                "autoreact": false
+            }
+        }
+    ],
+    "dashboard": {
+        "port": 26435,
+        "host": "127.0.0.1"
+    }
+}

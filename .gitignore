@@ -1,0 +1,12 @@
+#env
+yungkashi
+
+#note related
+.notes
+barebones.plan
+
+#u can take a guess lol
+.logins
+config.json
+
+__pycache__
