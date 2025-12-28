@@ -102,8 +102,7 @@ class Account(commands.Cog):
             f"**Avatar URL:** {user.avatar.url if user.avatar else 'None'}"
         ]
 
-# leave this in comments in case i or someone else wants to print to the console in the future 
-# print(f"{details}")
+        print(f"{details}")
 
         if profile.badges:
             badge_display = []
