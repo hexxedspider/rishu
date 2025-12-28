@@ -27,6 +27,7 @@ class Misc(commands.Cog):
         self.auto_react_others = misc_settings.get('auto_react_others', False)
         self.auto_leave_gc = misc_settings.get('auto_leave_gc', False)
         self.auto_react_emoji = misc_settings.get('auto_react_emoji', '👍')
+        self.self_react_emoji = misc_settings.get('self_react_emoji', '⭐')
         self.silenced_users = set(misc_settings.get('silenced_users', []))
         self.afk = misc_settings.get('afk', False)
         self.afk_message = misc_settings.get('afk_message', 'I am currently AFK.')
@@ -61,6 +62,7 @@ class Misc(commands.Cog):
                         'auto_react_others': self.auto_react_others,
                         'auto_leave_gc': self.auto_leave_gc,
                         'auto_react_emoji': self.auto_react_emoji,
+                        'self_react_emoji': self.self_react_emoji,
                         'silenced_users': list(self.silenced_users),
                         'afk': self.afk,
                         'afk_message': self.afk_message
@@ -197,7 +199,9 @@ class Misc(commands.Cog):
             await ctx.send("Usage: !sellrarity add/remove <rarity> or !sellrarity list")
 
     @commands.command()
-    async def autoreactself(self, ctx):
+    async def autoreactself(self, ctx, emoji: str = None):
+        if emoji:
+            self.self_react_emoji = emoji
         self.auto_self_react = not self.auto_self_react
         self.save_misc_settings()
 
@@ -295,7 +299,7 @@ class Misc(commands.Cog):
             except: pass
 
         if self.auto_self_react and message.author == self.bot.user:
-            await message.add_reaction('⭐')
+            await message.add_reaction(self.self_react_emoji)
 
         if self.auto_react_others and message.author != self.bot.user and not message.author.bot:
             await message.add_reaction(self.auto_react_emoji)

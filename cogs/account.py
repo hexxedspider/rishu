@@ -6,6 +6,7 @@ import io
 import json
 import os
 import sys
+import random
 from datetime import datetime
 
 class Account(commands.Cog):
@@ -251,12 +252,14 @@ class Account(commands.Cog):
             await ctx.send(f"Restore failed: {e}", delete_after=10)
 
     @commands.command()
-    async def clear(self, ctx, limit: int = 100):
+    async def clear(self, ctx, limit: int = None):
+        if limit is None:
+            limit = 1000
         async for message in ctx.channel.history(limit=limit):
             if message.author == self.bot.user:
                 try:
                     await message.delete()
-                    await asyncio.sleep(0.5)
+                    await asyncio.sleep(random.uniform(0.3, 1.0))
                 except:
                     continue
 
