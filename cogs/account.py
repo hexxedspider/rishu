@@ -107,7 +107,6 @@ class Account(commands.Cog):
             badge_display = []
             for b in profile.badges:
                 if 'Server boosting' in b.description:
-                    # Assume tier based on description, but since it's "Server boosting since date", perhaps just display as "Server Booster"
                     badge_display.append("Server Booster")
                 elif 'Earned' not in b.description:
                     badge_display.append(b.description)
@@ -357,6 +356,109 @@ class Account(commands.Cog):
         await ctx.send("Restarting bot...")
         await self.bot.close()
         os.execv(sys.executable, [sys.executable] + sys.argv)
+
+    @commands.command()
+    async def block(self, ctx, user: discord.User):
+        try:
+            await self.bot.http.request(
+                discord.http.Route('PUT', '/users/@me/relationships/{user_id}', user_id=user.id),
+                json={'type': 2}
+            )
+            await ctx.send(f"Blocked {user}.")
+        except Exception as e:
+            await ctx.send(f"Failed to block: {e}")
+
+    @commands.command()
+    async def unblock(self, ctx, user: discord.User):
+        try:
+            await self.bot.http.request(
+                discord.http.Route('DELETE', '/users/@me/relationships/{user_id}', user_id=user.id)
+            )
+            await ctx.send(f"Unblocked {user}.")
+        except Exception as e:
+            await ctx.send(f"Failed to unblock: {e}")
+
+    @commands.command()
+    async def friend(self, ctx, user: discord.User):
+        try:
+            await self.bot.http.request(
+                discord.http.Route('POST', '/users/@me/relationships'),
+                json={'username': user.name, 'discriminator': user.discriminator or '0'}
+            )
+            await ctx.send(f"Sent friend request to {user}.")
+        except Exception as e:
+            await ctx.send(f"Failed to send friend request: {e}")
+
+    @commands.command()
+    async def unfriend(self, ctx, user: discord.User):
+        try:
+            await self.bot.http.request(
+                discord.http.Route('DELETE', '/users/@me/relationships/{user_id}', user_id=user.id)
+            )
+            await ctx.send(f"Removed {user} from friends.")
+        except Exception as e:
+            await ctx.send(f"Failed to remove friend: {e}")
+
+    @commands.command()
+    async def join(self, ctx, invite: str):
+        try:
+            invite_code = invite.split('/')[-1] if '/' in invite else invite
+            await self.bot.http.request(
+                discord.http.Route('POST', '/invites/{invite_code}', invite_code=invite_code)
+            )
+            await ctx.send(f"Joined server via invite: {invite}")
+        except Exception as e:
+            await ctx.send(f"Failed to join: {e}")
+
+    @commands.command()
+    async def leave(self, ctx, guild_id: int = None):
+        if guild_id:
+            guild = self.bot.get_guild(guild_id)
+        else:
+            guild = ctx.guild
+
+        if not guild:
+            return await ctx.send("Guild not found.")
+
+        try:
+            await guild.leave()
+            await ctx.send(f"Left {guild.name}.")
+        except Exception as e:
+            await ctx.send(f"Failed to leave: {e}")
+
+    @commands.command()
+    async def dump(self, ctx, guild_id: int = None):
+        if guild_id:
+            guild = self.bot.get_guild(guild_id)
+        else:
+            guild = ctx.guild
+
+        if not guild:
+            return await ctx.send("Guild not found.")
+
+        info = f"**{guild.name}**\n"
+        info += f"ID: {guild.id}\n"
+        info += f"Owner: {guild.owner}\n"
+        info += f"Members: {guild.member_count}\n"
+        info += f"Channels: {len(guild.channels)}\n"
+        info += f"Roles: {len(guild.roles)}\n"
+
+        await ctx.send(info)
+
+    @commands.command()
+    async def friends(self, ctx):
+        try:
+            relationships = await self.bot.http.request(discord.http.Route('GET', '/users/@me/relationships'))
+            friends = [rel for rel in relationships if rel['type'] == 1]
+            if not friends:
+                return await ctx.send("No friends found.")
+
+            friend_list = "\n".join([f"- {rel['user']['username']}#{rel['user']['discriminator']}" for rel in friends[:20]])
+            if len(friends) > 20:
+                friend_list += f"\n... and {len(friends) - 20} more"
+            await ctx.send(f"**Friends:**\n{friend_list}")
+        except Exception as e:
+            await ctx.send(f"Failed to get friends: {e}")
 
 async def setup(bot):
     await bot.add_cog(Account(bot))

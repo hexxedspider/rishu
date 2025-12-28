@@ -127,34 +127,30 @@ class Misc(commands.Cog):
         self.save_misc_settings()
 
     @commands.command()
-    async def report(self, ctx, guild_id: int, channel_id: int, message_id: int, reason: int = 2):
-        """Reports a message. Reason codes: 0: Illegal, 1: Harassment, 2: Spam, 3: Self-harm, 4: NSFW."""
-        url = 'https://discordapp.com/api/v8/report'
-        payload = {
-            'channel_id': str(channel_id),
-            'message_id': str(message_id),
-            'guild_id': str(guild_id),
-            'reason': reason
-        }
-        headers = {
-            'Accept': '*/*',
-            'Accept-Language': 'sv-SE',
-            'User-Agent': 'Discord/21295 CFNetwork/1128.0.1 Darwin/19.6.0',
-            'Content-Type': 'application/json',
-            'Authorization': self.bot.http.token
-        }
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload, headers=headers) as resp:
-                if resp.status == 201:
-                    await ctx.send("[!] Reported successfully.")
-                else:
-                    try:
-                        data = await resp.json()
-                        msg = data.get('message', await resp.text())
-                    except:
-                        msg = await resp.text()
-                    await ctx.send(f"[!] Error: {msg} | Status Code: {resp.status}")
+    async def report(self, ctx, user: discord.User, amount: int = 10):
+        reported = 0
+        async for message in ctx.channel.history(limit=100):
+            if message.author == user and reported < amount:
+                url = 'https://discordapp.com/api/v8/report'
+                payload = {
+                    'channel_id': str(message.channel.id),
+                    'message_id': str(message.id),
+                    'guild_id': str(message.guild.id) if message.guild else None,
+                    'reason': 2
+                }
+                headers = {
+                    'Accept': '*/*',
+                    'Accept-Language': 'sv-SE',
+                    'User-Agent': 'Discord/21295 CFNetwork/1128.0.1 Darwin/19.6.0',
+                    'Content-Type': 'application/json',
+                    'Authorization': self.bot.http.token
+                }
+
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(url, json=payload, headers=headers) as resp:
+                        if resp.status == 201:
+                            reported += 1
+                        await asyncio.sleep(0.1)
 
     @commands.command()
     async def owomanager(self, ctx, action: str):

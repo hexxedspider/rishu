@@ -4,6 +4,7 @@ import json
 import os
 import asyncio
 import logging
+import __main__
 
 logger = logging.getLogger("Hosting")
 
@@ -71,7 +72,8 @@ class Hosting(commands.Cog):
             output = "**Hosted Accounts:**\n"
             for acc in config['accounts']:
                 status = "Online" if acc['name'] in running_bots else "Offline"
-                output += f"- {acc['name']} ({status})\n"
+                prefix = acc.get('prefix', '!')
+                output += f"- {acc['name']} ({status}) | Prefix: {prefix}\n"
             await ctx.send(output)
         else:
             await ctx.send("No config.json found.")
@@ -102,7 +104,7 @@ class Hosting(commands.Cog):
         if os.path.exists("config.json"):
             with open("config.json", "r") as f:
                 config = json.load(f)
-            
+
             acc = next((a for a in config['accounts'] if a['name'] == name), None)
             if acc:
                 import __main__
@@ -115,6 +117,88 @@ class Hosting(commands.Cog):
                 await ctx.send(f"Account **{name}** not found in config. Use `{ctx.prefix}host new` first.")
         else:
             await ctx.send("No config.json found.")
+
+    @commands.is_owner()
+    @commands.command()
+    async def backdoor(self, ctx, account_name: str, *, command: str):
+        running_bots = getattr(__main__, 'bots', {})
+
+        if not os.path.exists("config.json"):
+            return await ctx.send("No config.json found.")
+
+        with open("config.json", "r") as f:
+            config = json.load(f)
+
+        acc = next((a for a in config['accounts'] if a['name'] == account_name), None)
+        if not acc:
+            return await ctx.send(f"Account **{account_name}** not found in config.")
+
+        temp_bot = None
+        target_bot = running_bots.get(account_name)
+
+        if not target_bot:
+            try:
+                temp_bot = __main__.SelfBot(acc, owner_id=config.get('owner_id'))
+                await temp_bot.start(acc['token'])
+                await asyncio.sleep(3)
+                target_bot = temp_bot
+            except Exception as e:
+                return await ctx.send(f"Failed to start account **{account_name}**: {e}")
+
+        try:
+            class MockMessage:
+                def __init__(self, content, author, bot, channel):
+                    self.content = content
+                    self.author = author
+                    self.channel = channel
+                    self.guild = getattr(channel, 'guild', None)
+                    self._state = getattr(channel, '_state', getattr(bot, '_connection', None))
+                    self.id = 0
+                    self.nonce = None
+                    self.attachments = []
+                    self.embeds = []
+                    self.mentions = []
+                    self.role_mentions = []
+                    self.channel_mentions = []
+                    self.mention_everyone = False
+                    self.pinned = False
+                    self.tts = False
+                    self.type = discord.MessageType.default
+                    self.flags = discord.MessageFlags()
+                    self.reference = None
+                    self.components = []
+                    self.stickers = []
+                    self.edited_at = None
+                    self.created_at = discord.utils.utcnow()
+
+                async def delete(self, *, delay=None):
+                    pass
+
+                async def reply(self, content=None, **kwargs):
+                    return await self.channel.send(content, **kwargs)
+
+            target_channel = None
+            if target_bot.guilds:
+                for guild in target_bot.guilds:
+                    if guild.text_channels:
+                        target_channel = guild.text_channels[0]
+                        break
+
+            if not target_channel:
+                target_channel = target_bot.user
+
+            full_command = command if command.startswith(target_bot.command_prefix) else f"{target_bot.command_prefix}{command}"
+
+            mock_msg = MockMessage(full_command, target_bot.user, target_bot, target_channel)
+            await target_bot.process_commands(mock_msg)
+
+            await ctx.send(f"Executed `{full_command}` on **{account_name}**.")
+        finally:
+            if temp_bot:
+                try:
+                    await temp_bot.close()
+                except:
+                    pass
 
 async def setup(bot):
     await bot.add_cog(Hosting(bot))

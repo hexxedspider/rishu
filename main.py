@@ -1,5 +1,3 @@
-print("uses beta version of discord.py-self, see the requirements.txt for more info")
-
 import asyncio
 import json
 import logging
@@ -16,10 +14,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(na
 logger = logging.getLogger("Main")
 
 class SelfBot(commands.Bot):
-    def __init__(self, account_config, *args, **kwargs):
+    def __init__(self, account_config, owner_id=None, *args, **kwargs):
         self.account_config = account_config
         self.name = account_config['name']
-        super().__init__(command_prefix=account_config['prefix'], self_bot=True, *args, **kwargs)
+        super().__init__(command_prefix=account_config['prefix'], self_bot=True, owner_id=owner_id, *args, **kwargs)
 
     async def on_ready(self):
         logger.info(f"[Account: {self.name}] Logged in as {self.user}")
@@ -293,7 +291,7 @@ async def execute(name: str = Form(...), command: str = Form(...)):
             self.created_at = discord.utils.utcnow()
 
         async def delete(self, *, delay=None):
-            pass # Dashboard messages can't be deleted
+            pass
 
         async def reply(self, content=None, **kwargs):
             return await self.channel.send(content, **kwargs)
@@ -319,13 +317,13 @@ async def execute(name: str = Form(...), command: str = Form(...)):
 
     return JSONResponse({"status": "success", "message": f"Command processed for {name} ({log_info})"})
 
-async def start_bot(name, token, prefix="!"):
+async def start_bot(name, token, prefix="!", owner_id=None):
     if name in bots:
         logger.warning(f"Bot {name} is already running. Stopping it first...")
         await stop_bot(name)
-    
+
     acc = {"name": name, "token": token, "prefix": prefix}
-    bot = SelfBot(acc)
+    bot = SelfBot(acc, owner_id=owner_id)
     bots[name] = bot
     asyncio.create_task(bot.start(token))
     logger.info(f"Bot {name} started.")
@@ -344,10 +342,11 @@ async def stop_bot(name):
         logger.warning(f"Bot {name} not found to stop.")
 
 async def run_bots(config):
+    owner_id = config.get('owner_id')
     for acc in config['accounts']:
         if acc['token'] == "YOUR_TOKEN_HERE":
             continue
-        await start_bot(acc['name'], acc['token'], acc.get('prefix', '!'))
+        await start_bot(acc['name'], acc['token'], acc.get('prefix', '!'), owner_id=owner_id)
 
 async def main():
     if not os.path.exists("config.json"):
