@@ -1,0 +1,21 @@
+{
+    "presets": [
+        {
+            "status": "online",
+            "text": "placeholder",
+            "enabled": true
+        },
+        {
+            "status": "idle",
+            "text": "placeholder",
+            "enabled": true
+        },
+        {
+            "status": "dnd",
+            "text": "placeholder",
+            "enabled": true
+        }
+    ],
+    "cycle_delay": 30,
+    "random_order": false
+}

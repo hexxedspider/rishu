@@ -108,12 +108,12 @@ class Misc(commands.Cog):
     async def gcclap(self, ctx):
         if not isinstance(ctx.channel, discord.GroupChannel):
             return await ctx.send("This command only works in Group Chats.")
-        
+
         for recipient in ctx.channel.recipients:
             if recipient != self.bot.user:
-                try: 
+                try:
                     await ctx.channel.remove_recipients(recipient)
-                    await asyncio.sleep(0.5)
+                    await asyncio.sleep(1)
                 except: continue
 
         await ctx.channel.leave()

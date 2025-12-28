@@ -23,7 +23,7 @@ class Help(commands.Cog):
         help_msg += "`vcjoin <channel>` - Joins VC\n"
         help_msg += "`cycle_decor` - Cycles decorations\n"
         help_msg += "`cycle_tags` - Cycles tags\n"
-        help_msg += "`cycle_status` - Cycles status\n"
+        help_msg += "`cycle_status [start|stop]` - Cycles status presets\n"
         help_msg += "`prefix <new_prefix>` - Sets prefix\n"
         help_msg += "`restart` - Restarts bot\n\n"
         

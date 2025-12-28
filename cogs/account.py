@@ -29,6 +29,15 @@ class Account(commands.Cog):
 
     @commands.command()
     async def setstatus(self, ctx, status: str, *, text: str = None):
+        async def delete_command():
+            await asyncio.sleep(10)
+            try:
+                await ctx.message.delete()
+            except:
+                pass
+
+        asyncio.create_task(delete_command())
+
         status_map = {
             "online": discord.Status.online,
             "dnd": discord.Status.dnd,
@@ -38,10 +47,18 @@ class Account(commands.Cog):
         discord_status = status_map.get(status.lower(), discord.Status.online)
         activity = discord.CustomActivity(name=text) if text else None
         await self.bot.change_presence(status=discord_status, activity=activity)
-        print(f"Status updated to {status} with text: {text}")
 
     @commands.command()
     async def setbio(self, ctx, *, bio: str = ""):
+        async def delete_command():
+            await asyncio.sleep(10)
+            try:
+                await ctx.message.delete()
+            except:
+                pass
+
+        asyncio.create_task(delete_command())
+
         try:
             await self.bot.user.edit(bio=bio)
         except Exception as e:
@@ -135,37 +152,44 @@ class Account(commands.Cog):
             try:
                 await ctx.send(info_msg)
             except Exception as e:
-                print(f"[Steal] Failed to send info: {e}")
+                pass
             return
 
-        print(f"[Steal] Cloning {user}...")
         backup_dir = f"backups/bot_{self.bot.user.id}"
         os.makedirs(backup_dir, exist_ok=True)
         backup_file = os.path.join(backup_dir, "original_profile.json")
 
         if not os.path.exists(backup_file):
-            print("[Steal] Creating first-time backup...")
-            my_profile = await self.bot.user.profile()
-            backup_data = {
-                "bio": my_profile.bio,
-                "pronouns": getattr(my_profile.metadata, 'pronouns', ""),
-            }
-            
-            async with aiohttp.ClientSession() as session:
-                if self.bot.user.avatar:
-                    async with session.get(self.bot.user.avatar.url) as r:
-                        if r.status == 200:
-                            with open(os.path.join(backup_dir, "avatar.png"), "wb") as f:
-                                f.write(await r.read())
-                if my_profile.banner:
-                    async with session.get(my_profile.banner.url) as r:
-                        if r.status == 200:
-                            with open(os.path.join(backup_dir, "banner.png"), "wb") as f:
-                                f.write(await r.read())
-            
-            with open(backup_file, "w") as f:
-                json.dump(backup_data, f, indent=4)
-            print("[Steal] Backup saved.")
+            try:
+                my_profile = await self.bot.user.profile()
+                backup_data = {
+                    "bio": my_profile.bio or "",
+                    "pronouns": getattr(my_profile.metadata, 'pronouns', "") or "",
+                    "accent_color": my_profile.accent_color.value if my_profile.accent_color else None,
+                }
+
+                async with aiohttp.ClientSession() as session:
+                    if self.bot.user.avatar:
+                        try:
+                            async with session.get(self.bot.user.avatar.url) as r:
+                                if r.status == 200:
+                                    with open(os.path.join(backup_dir, "avatar.png"), "wb") as f:
+                                        f.write(await r.read())
+                        except Exception as e:
+                            pass
+                    if my_profile.banner:
+                        try:
+                            async with session.get(my_profile.banner.url) as r:
+                                if r.status == 200:
+                                    with open(os.path.join(backup_dir, "banner.png"), "wb") as f:
+                                        f.write(await r.read())
+                        except Exception as e:
+                            pass
+
+                with open(backup_file, "w") as f:
+                    json.dump(backup_data, f, indent=4)
+            except Exception as e:
+                return await ctx.send("Failed to create backup. Cannot proceed with cloning.", delete_after=10)
 
         status = {"Avatar": "no", "Bio": "no", "Banner": "no", "Pronouns": "no", "Nickname": "no"}
         edit_kwargs = {}
@@ -201,46 +225,60 @@ class Account(commands.Cog):
                 await self.bot.user.edit(**edit_kwargs)
                 print(f"[Steal] Successfully updated profile with: {list(edit_kwargs.keys())}")
             except Exception as e:
-                print(f"[Steal] Failed to update profile: {e}")
                 if "Profile banners" in str(e):
                     status["Banner"] = "Nitro Required"
                     edit_kwargs.pop('banner', None)
                     if edit_kwargs:
                         try:
                             await self.bot.user.edit(**edit_kwargs)
-                            print(f"[Steal] Successfully updated profile without banner: {list(edit_kwargs.keys())}")
+                            print(f"[Steal] Successfully updated profile with: {list(edit_kwargs.keys())}")
                         except Exception as e2:
-                            print(f"[Steal] Failed to update profile without banner: {e2}")
+                            pass
 
         try:
             pronouns = getattr(profile.metadata, 'pronouns', None)
             if pronouns:
                 await self.bot.http.request(discord.http.Route('PATCH', '/users/@me/profile'), json={"pronouns": pronouns})
                 status["Pronouns"] = "yes"
-                print(f"[Steal] Successfully set pronouns to: {pronouns}")
             else:
                 status["Pronouns"] = "none"
         except Exception as e:
-            print(f"[Steal] Failed to set pronouns: {e}")
             status["Pronouns"] = "no"
 
         if ctx.guild:
             try:
                 await ctx.guild.me.edit(nick=user.display_name or user.name)
                 status["Nickname"] = "yes"
-                print(f"[Steal] Successfully set nickname to: {user.display_name or user.name}")
             except Exception as e:
-                print(f"[Steal] Failed to set nickname: {e}")
                 status["Nickname"] = "no"
 
-        summary = "\n".join([f"**{k}:** {v}" for k, v in status.items()])
-        print(f"[Steal] Cloned {user}: {summary}")
+        try:
+            verification_profile = await self.bot.user.profile()
+            verification_status = {
+                "Avatar": "OK" if self.bot.user.avatar and user.avatar else ("FAIL" if user.avatar else "N/A"),
+                "Bio": "OK" if verification_profile.bio == (profile.bio or "") else "FAIL",
+                "Banner": "OK" if self.bot.user.banner and profile.banner else ("Nitro" if not self.bot.user.banner and profile.banner else "N/A"),
+                "Pronouns": "OK" if getattr(verification_profile.metadata, 'pronouns', None) == getattr(profile.metadata, 'pronouns', None) else "FAIL",
+            }
 
-        print("[Steal] Backup preserved for potential restore.")
+            for key in verification_status:
+                if key in status and verification_status[key] != "N/A":
+                    status[key] = verification_status[key]
+
+        except Exception as e:
+            pass
 
     @commands.command()
     async def restore(self, ctx):
-        await ctx.message.delete()
+        async def delete_command():
+            await asyncio.sleep(10)
+            try:
+                await ctx.message.delete()
+            except:
+                pass
+
+        asyncio.create_task(delete_command())
+
         backup_dir = f"backups/bot_{self.bot.user.id}"
         backup_file = os.path.join(backup_dir, "original_profile.json")
 
@@ -266,7 +304,11 @@ class Account(commands.Cog):
             await self.bot.user.edit(**edit_kwargs)
 
             pronouns = data.get("pronouns", "")
-            await self.bot.http.request(discord.http.Route('PATCH', '/users/@me/profile'), json={"pronouns": pronouns})
+            if pronouns:
+                await self.bot.http.request(discord.http.Route('PATCH', '/users/@me/profile'), json={"pronouns": pronouns})
+
+            await ctx.send("Profile restored successfully!", delete_after=5)
+
         except Exception as e:
             await ctx.send(f"Restore failed: {e}", delete_after=10)
 
@@ -312,44 +354,65 @@ class Account(commands.Cog):
         await ctx.send(f"Now cycling through {len(decor_ids)} decorations.", delete_after=5)
 
     @commands.command()
-    async def cycle_status(self, ctx, *, presets: str = None):
+    async def cycle_status(self, ctx, action: str = "start"):
+        if action.lower() == "stop":
+            if self.status_cycle_task and not self.status_cycle_task.done():
+                self.status_cycle_task.cancel()
+                self.status_cycle_task = None
+                return await ctx.send("Stopped status cycling.", delete_after=5)
+            else:
+                return await ctx.send("Status cycling is not running.", delete_after=5)
+
         if self.status_cycle_task and not self.status_cycle_task.done():
-            self.status_cycle_task.cancel()
-            self.status_cycle_task = None
-            return await ctx.send("Stopped status cycling.", delete_after=5)
+            return await ctx.send("Status cycling is already running. Use `cycle_status stop` to stop it first.", delete_after=5)
+
+        status_config = {"presets": [], "cycle_delay": 30, "random_order": False}
+        if os.path.exists("status.json"):
+            try:
+                with open("status.json", "r") as f:
+                    status_config = json.load(f)
+            except Exception as e:
+                pass
+
+        enabled_presets = [p for p in status_config.get("presets", []) if p.get("enabled", True)]
+
+        if not enabled_presets:
+            return await ctx.send("No enabled status presets found in status.json. Please check the file and enable some presets.", delete_after=5)
+
+        status_map = {
+            "online": discord.Status.online,
+            "dnd": discord.Status.dnd,
+            "idle": discord.Status.idle,
+            "invisible": discord.Status.invisible,
+        }
 
         status_presets = []
-        if presets:
-            for p in presets.split('|'):
-                parts = p.strip().split(':', 1)
-                status_str = parts[0].strip().lower()
-                text = parts[1].strip() if len(parts) > 1 else None
+        for preset in enabled_presets:
+            status_str = preset.get("status", "online").lower()
+            text = preset.get("text", "")
+            discord_status = status_map.get(status_str, discord.Status.online)
+            status_presets.append((discord_status, text))
 
-                status_map = {
-                    "online": discord.Status.online,
-                    "dnd": discord.Status.dnd,
-                    "idle": discord.Status.idle,
-                    "invisible": discord.Status.invisible,
-                }
-                discord_status = status_map.get(status_str, discord.Status.online)
-                status_presets.append((discord_status, text))
-        else:
-            status_presets = self.hardcoded_presets
-
-        if not status_presets:
-            return await ctx.send("Please provide presets or ensure hardcoded ones exist.", delete_after=5)
+        cycle_delay = status_config.get("cycle_delay", 30)
+        random_order = status_config.get("random_order", False)
 
         async def do_cycle():
             while True:
-                for discord_status, text in status_presets:
+                current_presets = status_presets[:]
+                if random_order:
+                    random.shuffle(current_presets)
+
+                for discord_status, text in current_presets:
                     try:
                         activity = discord.CustomActivity(name=text) if text else None
                         await self.bot.change_presence(status=discord_status, activity=activity)
-                    except: pass
-                    await asyncio.sleep(30)
+                        print(f"[Cycle Status] Set to {discord_status} with text: {text}")
+                    except Exception as e:
+                        pass
+                    await asyncio.sleep(cycle_delay)
 
         self.status_cycle_task = asyncio.create_task(do_cycle())
-        await ctx.send(f"Now cycling through {len(status_presets)} {'custom' if presets else 'hardcoded'} statuses.", delete_after=5)
+        await ctx.send(f"Now cycling through {len(status_presets)} status presets every {cycle_delay} seconds.", delete_after=5)
 
     @commands.command()
     async def prefix(self, ctx, new_prefix: str):
