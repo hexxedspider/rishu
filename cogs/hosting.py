@@ -74,12 +74,22 @@ class Hosting(commands.Cog):
 
     @commands.command()
     async def unhost(self, ctx, name: str):
-        import __main__
-        if hasattr(__main__, 'stop_bot'):
-            await __main__.stop_bot(name)
-            await ctx.send(f"Stopped bot: **{name}**")
+        if os.path.exists("config.json"):
+            with open("config.json", "r") as f:
+                config = json.load(f)
+            
+            config['accounts'] = [acc for acc in config['accounts'] if acc['name'] != name]
+            
+            with open("config.json", "w") as f:
+                json.dump(config, f, indent=4)
+            
+            import __main__
+            if hasattr(__main__, 'stop_bot'):
+                await __main__.stop_bot(name)
+            
+            await ctx.send(f"Removed **{name}** from config.")
         else:
-            await ctx.send("Failed to stop bot dynamically.")
+            await ctx.send("No config.json found.")
 
     @host.command(name="start")
     async def host_start(self, ctx, name: str):

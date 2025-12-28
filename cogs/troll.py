@@ -13,8 +13,9 @@ class Troll(commands.Cog):
     async def ip(self, ctx, user: discord.Member = None):
         target = user or ctx.author
         ip = f"{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}"
-        await asyncio.sleep(2.5)
-        await ctx.send(f"**target:** {target.mention}\n**ip that was found:** `{ip}`")
+        await ctx.send(f"grabbing ip for {target.mention}...")
+        await asyncio.sleep(2.723)
+        await ctx.send(f"*ip that was found:* `{ip}`")
 
     @commands.command()
     async def ddos(self, ctx, target: str):

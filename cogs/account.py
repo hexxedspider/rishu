@@ -23,7 +23,6 @@ class Account(commands.Cog):
     @commands.command()
     async def setnickname(self, ctx, *, nickname: str = None):
         await ctx.guild.me.edit(nick=nickname)
-        await ctx.send(f"Nickname changed to: {nickname}")
 
     @commands.command()
     async def setstatus(self, ctx, status: str, *, text: str = None):
@@ -42,7 +41,6 @@ class Account(commands.Cog):
     async def setbio(self, ctx, *, bio: str = ""):
         try:
             await self.bot.user.edit(bio=bio)
-            await ctx.send(f"Bio updated to: {bio[:30]}...", delete_after=5)
         except Exception as e:
             await ctx.send(f"Failed to set bio: {e}", delete_after=5)
 
@@ -55,7 +53,6 @@ class Account(commands.Cog):
                         return await ctx.send("Failed to download image.", delete_after=5)
                     data = await resp.read()
                     await self.bot.user.edit(avatar=data)
-                    await ctx.send("Avatar updated!", delete_after=5)
             except Exception as e:
                 await ctx.send(f"Failed to set avatar: {e}", delete_after=5)
 
@@ -68,7 +65,6 @@ class Account(commands.Cog):
                         return await ctx.send("Failed to download image.", delete_after=5)
                     data = await resp.read()
                     await self.bot.user.edit(banner=data)
-                    await ctx.send("Banner updated!", delete_after=5)
             except Exception as e:
                 if "Profile banners" in str(e):
                     await ctx.send("Failed: Bot lacks Nitro (Banners are Nitro-only).", delete_after=5)
@@ -79,7 +75,6 @@ class Account(commands.Cog):
     async def setpronouns(self, ctx, *, pronouns: str = ""):
         try:
             await self.bot.http.request(discord.http.Route('PATCH', '/users/@me/profile'), json={"pronouns": pronouns})
-            await ctx.send(f"Pronouns updated to: {pronouns}", delete_after=5)
         except Exception as e:
             await ctx.send(f"Failed to set pronouns: {e}", delete_after=5)
 
@@ -105,8 +100,19 @@ class Account(commands.Cog):
             f"**Avatar URL:** {user.avatar.url if user.avatar else 'None'}"
         ]
 
+# leave this in comments in case i or someone else wants to print to the console in the future 
+# print(f"{details}")
+
         if profile.badges:
-            details.append(f"**Badges:** {', '.join([b.description for b in profile.badges])}")
+            badge_display = []
+            for b in profile.badges:
+                if b.name.startswith('boost_'):
+                    tier = b.name.split('_')[1]
+                    badge_display.append(f"{tier}m")
+                elif 'Earned' not in b.description and 'Server boosting' not in b.description:
+                    badge_display.append(b.description)
+            if badge_display:
+                details.append(f"**Badges:** {', '.join(badge_display)}")
 
         if ctx.guild:
             member = ctx.guild.get_member(user.id)
@@ -118,9 +124,9 @@ class Account(commands.Cog):
 
         info_msg = "\n".join(details)
         print(f"[Steal] Info requested for {user}")
-        
+
         if not clone:
-            return await ctx.send(info_msg, delete_after=30)
+            return
 
         print(f"[Steal] Cloning {user}...")
         backup_dir = f"backups/bot_{self.bot.user.id}"
@@ -166,6 +172,12 @@ class Account(commands.Cog):
             edit_kwargs['bio'] = profile.bio or ""
             status["Bio"] = "yes"
 
+            if profile.accent_color:
+                edit_kwargs['accent_color'] = profile.accent_color.value
+                status["Accent Color"] = "yes"
+            else:
+                status["Accent Color"] = "none"
+
             if profile.banner:
                 try:
                     async with session.get(profile.banner.url) as resp:
@@ -203,7 +215,7 @@ class Account(commands.Cog):
                 status["Nickname"] = "no"
 
         summary = "\n".join([f"**{k}:** {v}" for k, v in status.items()])
-        await ctx.send(f"**Successfully cloned {user}**\n{summary}\n\n*Detailed User Info:* \n{info_msg}", delete_after=20)
+        print(f"[Steal] Cloned {user}: {summary}")
 
     @commands.command()
     async def restore(self, ctx):
@@ -231,11 +243,9 @@ class Account(commands.Cog):
                     edit_kwargs["banner"] = f.read()
 
             await self.bot.user.edit(**edit_kwargs)
-            
+
             pronouns = data.get("pronouns", "")
             await self.bot.http.request(discord.http.Route('PATCH', '/users/@me/profile'), json={"pronouns": pronouns})
-
-            await ctx.send("Profile restored successfully!", delete_after=5)
         except Exception as e:
             await ctx.send(f"Restore failed: {e}", delete_after=10)
 
@@ -248,14 +258,12 @@ class Account(commands.Cog):
                     await asyncio.sleep(0.5)
                 except:
                     continue
-        await ctx.send("Cleared messages.", delete_after=5)
 
     @commands.command()
     async def vcjoin(self, ctx, channel_id: int):
         channel = self.bot.get_channel(channel_id)
         if isinstance(channel, discord.VoiceChannel):
             await channel.connect()
-            await ctx.send("Joined channel.")
         else:
             await ctx.send("Invalid Voice Channel ID.")
 
@@ -279,28 +287,6 @@ class Account(commands.Cog):
         
         self.decor_cycle_task = asyncio.create_task(do_cycle())
         await ctx.send(f"Now cycling through {len(decor_ids)} decorations.")
-
-    @commands.command()
-    async def cycle_tags(self, ctx, *tags: str):
-        if self.tags_cycle_task and not self.tags_cycle_task.done():
-            self.tags_cycle_task.cancel()
-            self.tags_cycle_task = None
-            return await ctx.send("Stopped tag cycling.")
-        
-        if not tags:
-            return await ctx.send("Please provide at least one tag.")
-        
-        base_nick = ctx.guild.me.display_name.split(' [')[0]
-        async def do_cycle():
-            while True:
-                for tag in tags:
-                    try:
-                        await ctx.guild.me.edit(nick=f"{base_nick} [{tag}]")
-                    except: pass
-                    await asyncio.sleep(5)
-        
-        self.tags_cycle_task = asyncio.create_task(do_cycle())
-        await ctx.send(f"Now cycling through {len(tags)} tags.")
 
     @commands.command()
     async def cycle_status(self, ctx, *, presets: str = None):
@@ -345,22 +331,20 @@ class Account(commands.Cog):
     @commands.command()
     async def prefix(self, ctx, new_prefix: str):
         self.bot.command_prefix = new_prefix
-        
+
         import json
         import os
         if os.path.exists("config.json"):
             with open("config.json", "r") as f:
                 config = json.load(f)
-            
+
             for acc in config['accounts']:
                 if acc['name'] == self.bot.name:
                     acc['prefix'] = new_prefix
                     break
-            
+
             with open("config.json", "w") as f:
                 json.dump(config, f, indent=4)
-        
-        await ctx.send(f"Prefix changed to: `{new_prefix}` (saved to config)")
 
 async def setup(bot):
     await bot.add_cog(Account(bot))
