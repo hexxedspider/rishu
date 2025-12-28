@@ -83,7 +83,14 @@ class Account(commands.Cog):
 
     @commands.group(invoke_without_command=True)
     async def steal(self, ctx, user: discord.User, *args):
-        await ctx.message.delete()
+        async def delete_command():
+            await asyncio.sleep(10)
+            try:
+                await ctx.message.delete()
+            except:
+                pass
+            
+        asyncio.create_task(delete_command())
         clone = "-c" in args or "--clone" in args
         
         try:
@@ -125,6 +132,10 @@ class Account(commands.Cog):
         print(f"[Steal] Info requested for {user}")
 
         if not clone:
+            try:
+                await ctx.send(info_msg)
+            except Exception as e:
+                print(f"[Steal] Failed to send info: {e}")
             return
 
         print(f"[Steal] Cloning {user}...")
@@ -188,37 +199,44 @@ class Account(commands.Cog):
         if edit_kwargs:
             try:
                 await self.bot.user.edit(**edit_kwargs)
+                print(f"[Steal] Successfully updated profile with: {list(edit_kwargs.keys())}")
             except Exception as e:
+                print(f"[Steal] Failed to update profile: {e}")
                 if "Profile banners" in str(e):
                     status["Banner"] = "Nitro Required"
                     edit_kwargs.pop('banner', None)
                     if edit_kwargs:
-                        try: await self.bot.user.edit(**edit_kwargs)
-                        except: pass
+                        try:
+                            await self.bot.user.edit(**edit_kwargs)
+                            print(f"[Steal] Successfully updated profile without banner: {list(edit_kwargs.keys())}")
+                        except Exception as e2:
+                            print(f"[Steal] Failed to update profile without banner: {e2}")
 
         try:
             pronouns = getattr(profile.metadata, 'pronouns', None)
             if pronouns:
                 await self.bot.http.request(discord.http.Route('PATCH', '/users/@me/profile'), json={"pronouns": pronouns})
                 status["Pronouns"] = "yes"
+                print(f"[Steal] Successfully set pronouns to: {pronouns}")
             else:
                 status["Pronouns"] = "none"
-        except:
+        except Exception as e:
+            print(f"[Steal] Failed to set pronouns: {e}")
             status["Pronouns"] = "no"
 
         if ctx.guild:
             try:
                 await ctx.guild.me.edit(nick=user.display_name or user.name)
                 status["Nickname"] = "yes"
-            except:
+                print(f"[Steal] Successfully set nickname to: {user.display_name or user.name}")
+            except Exception as e:
+                print(f"[Steal] Failed to set nickname: {e}")
                 status["Nickname"] = "no"
 
         summary = "\n".join([f"**{k}:** {v}" for k, v in status.items()])
         print(f"[Steal] Cloned {user}: {summary}")
 
-        if os.path.exists(backup_dir):
-            shutil.rmtree(backup_dir)
-            print("[Steal] Backup deleted after cloning.")
+        print("[Steal] Backup preserved for potential restore.")
 
     @commands.command()
     async def restore(self, ctx):

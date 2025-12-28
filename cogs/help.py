@@ -61,7 +61,7 @@ class Help(commands.Cog):
         help_msg += "`iplookup <ip>` - IP lookup\n\n"
 
         help_msg += "__**owner cmds (Owner Only)**__\n"
-        help_msg += "`newhost <name> <token>` - Adds new host\n"
+        help_msg += "`newhost <name> <token>` - Adds new 3host\n"
         help_msg += "`host list` - Lists hosts\n"
         help_msg += "`host start <name>` - Starts host\n"
         help_msg += "`unhost <name>` - Removes host\n\n"
