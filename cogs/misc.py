@@ -94,7 +94,7 @@ class Misc(commands.Cog):
             except: continue
 
         try:
-            new_gc = await self.bot.create_group(*friend_members)
+            new_gc = await self.bot.create_group(*friend_members, name=ctx.channel.name)
             await ctx.channel.leave()
         except discord.HTTPException as e:
             if e.status == 400 and e.code == 50007:
@@ -126,8 +126,8 @@ class Misc(commands.Cog):
             self.silenced_users.add(user.id)
         self.save_misc_settings()
 
-    @commands.command() #untested, you can guess why, although given trying to make this work, im almost certain this wont, but no point in not trying
-    async def spamreport(self, ctx, guild_id: int, channel_id: int, message_id: int, reason: int = 2):
+    @commands.command()
+    async def report(self, ctx, guild_id: int, channel_id: int, message_id: int, reason: int = 2):
         """Reports a message. Reason codes: 0: Illegal, 1: Harassment, 2: Spam, 3: Self-harm, 4: NSFW."""
         url = 'https://discordapp.com/api/v8/report'
         payload = {
@@ -217,7 +217,6 @@ class Misc(commands.Cog):
         self.auto_leave_gc = not self.auto_leave_gc
         self.save_misc_settings()
         if self.auto_leave_gc:
-            # Leave all current GCs
             for channel in self.bot.private_channels:
                 if isinstance(channel, discord.GroupChannel):
                     try:
@@ -260,6 +259,19 @@ class Misc(commands.Cog):
                         await ctx.send("No definition found.")
                 else:
                     await ctx.send("Failed to get definition.")
+
+    @commands.command()
+    async def react(self, ctx, emoji: str, user: discord.User = None):
+        target_user = user or ctx.author
+        async for message in ctx.channel.history(limit=50):
+            if message.author == target_user:
+                try:
+                    await message.add_reaction(emoji)
+                    return
+                except:
+                    await ctx.send("Failed to react.")
+                    return
+        await ctx.send(f"No recent message from {target_user.mention} found.")
 
     async def owo_farming_loop(self):
         while self.owo_farming:
@@ -305,7 +317,10 @@ class Misc(commands.Cog):
             await message.add_reaction(self.auto_react_emoji)
 
         if self.afk and self.bot.user in message.mentions:
-            await message.channel.send(self.afk_message)
+            if message.guild:
+                await message.reply(self.afk_message)
+            else:
+                await message.channel.send(self.afk_message)
 
         if isinstance(message.channel, discord.GroupChannel):
             pass

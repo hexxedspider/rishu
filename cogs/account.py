@@ -7,6 +7,7 @@ import json
 import os
 import sys
 import random
+import shutil
 from datetime import datetime
 
 class Account(commands.Cog):
@@ -102,15 +103,13 @@ class Account(commands.Cog):
             f"**Avatar URL:** {user.avatar.url if user.avatar else 'None'}"
         ]
 
-        print(f"{details}")
-
         if profile.badges:
             badge_display = []
             for b in profile.badges:
-                if b.name.startswith('boost_'):
-                    tier = b.name.split('_')[1]
-                    badge_display.append(f"{tier}m")
-                elif 'Earned' not in b.description and 'Server boosting' not in b.description:
+                if 'Server boosting' in b.description:
+                    # Assume tier based on description, but since it's "Server boosting since date", perhaps just display as "Server Booster"
+                    badge_display.append("Server Booster")
+                elif 'Earned' not in b.description:
                     badge_display.append(b.description)
             if badge_display:
                 details.append(f"**Badges:** {', '.join(badge_display)}")
@@ -218,6 +217,10 @@ class Account(commands.Cog):
         summary = "\n".join([f"**{k}:** {v}" for k, v in status.items()])
         print(f"[Steal] Cloned {user}: {summary}")
 
+        if os.path.exists(backup_dir):
+            shutil.rmtree(backup_dir)
+            print("[Steal] Backup deleted after cloning.")
+
     @commands.command()
     async def restore(self, ctx):
         await ctx.message.delete()
@@ -275,11 +278,11 @@ class Account(commands.Cog):
         if self.decor_cycle_task and not self.decor_cycle_task.done():
             self.decor_cycle_task.cancel()
             self.decor_cycle_task = None
-            return await ctx.send("Stopped decoration cycling.")
-        
+            return await ctx.send("Stopped decoration cycling.", delete_after=5)
+
         if not decor_ids:
-            return await ctx.send("Please provide at least one decoration ID.")
-        
+            return await ctx.send("Please provide at least one decoration ID.", delete_after=5)
+
         async def do_cycle():
             while True:
                 for d_id in decor_ids:
@@ -287,24 +290,24 @@ class Account(commands.Cog):
                         await self.bot.user.edit(avatar_decoration=d_id)
                     except: pass
                     await asyncio.sleep(10)
-        
+
         self.decor_cycle_task = asyncio.create_task(do_cycle())
-        await ctx.send(f"Now cycling through {len(decor_ids)} decorations.")
+        await ctx.send(f"Now cycling through {len(decor_ids)} decorations.", delete_after=5)
 
     @commands.command()
     async def cycle_status(self, ctx, *, presets: str = None):
         if self.status_cycle_task and not self.status_cycle_task.done():
             self.status_cycle_task.cancel()
             self.status_cycle_task = None
-            return await ctx.send("Stopped status cycling.")
-        
+            return await ctx.send("Stopped status cycling.", delete_after=5)
+
         status_presets = []
         if presets:
             for p in presets.split('|'):
                 parts = p.strip().split(':', 1)
                 status_str = parts[0].strip().lower()
                 text = parts[1].strip() if len(parts) > 1 else None
-                
+
                 status_map = {
                     "online": discord.Status.online,
                     "dnd": discord.Status.dnd,
@@ -315,9 +318,9 @@ class Account(commands.Cog):
                 status_presets.append((discord_status, text))
         else:
             status_presets = self.hardcoded_presets
-            
+
         if not status_presets:
-            return await ctx.send("Please provide presets or ensure hardcoded ones exist.")
+            return await ctx.send("Please provide presets or ensure hardcoded ones exist.", delete_after=5)
 
         async def do_cycle():
             while True:
@@ -327,9 +330,9 @@ class Account(commands.Cog):
                         await self.bot.change_presence(status=discord_status, activity=activity)
                     except: pass
                     await asyncio.sleep(30)
-        
+
         self.status_cycle_task = asyncio.create_task(do_cycle())
-        await ctx.send(f"Now cycling through {len(status_presets)} {'custom' if presets else 'hardcoded'} statuses.")
+        await ctx.send(f"Now cycling through {len(status_presets)} {'custom' if presets else 'hardcoded'} statuses.", delete_after=5)
 
     @commands.command()
     async def prefix(self, ctx, new_prefix: str):

@@ -33,12 +33,16 @@ class Help(commands.Cog):
         help_msg += "`softwizz` - Soft wizzes server\n"
         help_msg += "`vcclap` - VC claps\n"
         help_msg += "`kickbots` - Kicks bots\n\n"
+
+        help_msg += "__**Vanity (Owner Only)**__\n"
+        help_msg += "`vanitysniper <start|stop>` - Start/stop vanity sniper\n"
+        help_msg += "`checkvanities` - Check vanity availability\n\n"
         
         help_msg += "__**Misc**__\n"
         help_msg += "`gcremake` - Recreates group chat\n"
         help_msg += "`gcclap` - Leaves group chat\n"
         help_msg += "`silence <user>` - Silences user\n"
-        help_msg += "`spamreport <guild_id> <channel_id> <message_id>` - Reports message\n"
+        help_msg += "`report <guild_id> <channel_id> <message_id>` - Reports message\n"
         help_msg += "`owomanager <on|off>` - Toggles OwO farming\n"
         help_msg += "`setdaily <hour> <offset>` - Sets daily time & timezone\n"
         help_msg += "`sellrarity <add|remove|list> [[rarity]]` - Manages auto-sell items\n"
@@ -47,7 +51,8 @@ class Help(commands.Cog):
         help_msg += "`autoleavegc` - Toggles auto leave GCs\n"
         help_msg += "`afk <message>` - Sets AFK with message\n"
         help_msg += "`weather <city>` - Gets weather\n"
-        help_msg += "`define <word>` - Defines word\n\n"
+        help_msg += "`define <word>` - Defines word\n"
+        help_msg += "`react <emoji> [user]` - Reacts to last message\n\n"
         
         help_msg += "__**Troll**__\n"
         help_msg += "`ip <<@person>>` - Grabs IP\n"
@@ -55,7 +60,7 @@ class Help(commands.Cog):
         help_msg += "`nitrogen` - Generates nitro\n"
         help_msg += "`iplookup <ip>` - IP lookup\n\n"
 
-        help_msg += "__**owner cmds**__\n"
+        help_msg += "__**owner cmds (Owner Only)**__\n"
         help_msg += "`newhost <name> <token>` - Adds new host\n"
         help_msg += "`host list` - Lists hosts\n"
         help_msg += "`host start <name>` - Starts host\n"
@@ -63,7 +68,7 @@ class Help(commands.Cog):
         
         help_msg += "*To see command details, use the dashboard or read the walkthrough.*"
         
-        await ctx.send(help_msg)
+        await ctx.send(help_msg, delete_after=20)
 
 async def setup(bot):
     await bot.add_cog(Help(bot))
