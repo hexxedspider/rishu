@@ -5,6 +5,7 @@ import asyncio
 import io
 import json
 import os
+import sys
 from datetime import datetime
 
 class Account(commands.Cog):
@@ -345,6 +346,12 @@ class Account(commands.Cog):
 
             with open("config.json", "w") as f:
                 json.dump(config, f, indent=4)
+
+    @commands.command()
+    async def restart(self, ctx):
+        await ctx.send("Restarting bot...")
+        await self.bot.close()
+        os.execv(sys.executable, [sys.executable] + sys.argv)
 
 async def setup(bot):
     await bot.add_cog(Account(bot))
