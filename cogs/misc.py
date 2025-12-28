@@ -127,30 +127,46 @@ class Misc(commands.Cog):
         self.save_misc_settings()
 
     @commands.command()
-    async def report(self, ctx, user: discord.User, amount: int = 10):
-        reported = 0
-        async for message in ctx.channel.history(limit=100):
-            if message.author == user and reported < amount:
-                url = 'https://discordapp.com/api/v8/report'
-                payload = {
-                    'channel_id': str(message.channel.id),
-                    'message_id': str(message.id),
-                    'guild_id': str(message.guild.id) if message.guild else None,
-                    'reason': 2
-                }
-                headers = {
-                    'Accept': '*/*',
-                    'Accept-Language': 'sv-SE',
-                    'User-Agent': 'Discord/21295 CFNetwork/1128.0.1 Darwin/19.6.0',
-                    'Content-Type': 'application/json',
-                    'Authorization': self.bot.http.token
-                }
+    async def report(self, ctx, message_id: int = None):
+        if message_id is None:
+            if ctx.message.reference and ctx.message.reference.message_id:
+                message_id = ctx.message.reference.message_id
+            else:
+                return await ctx.send("Please provide a message ID or reply to a message to report.")
 
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(url, json=payload, headers=headers) as resp:
-                        if resp.status == 201:
-                            reported += 1
-                        await asyncio.sleep(0.1)
+        try:
+            message = await ctx.channel.fetch_message(message_id)
+        except discord.NotFound:
+            return await ctx.send("Message not found.")
+        except discord.Forbidden:
+            return await ctx.send("Cannot access that message.")
+
+        url = 'https://discordapp.com/api/v8/report'
+        payload = {
+            'channel_id': str(ctx.channel.id),
+            'message_id': str(message_id),
+            'guild_id': str(ctx.guild.id) if ctx.guild else None,
+            'reason': 2
+        }
+        headers = {
+            'Accept': '*/*',
+            'Accept-Language': 'sv-SE',
+            'User-Agent': 'Discord/21295 CFNetwork/1128.0.1 Darwin/19.6.0',
+            'Content-Type': 'application/json',
+            'Authorization': self.bot.http.token
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, headers=headers) as resp:
+                if resp.status == 201:
+                    await ctx.send(f"[!] Reported message from {message.author} successfully.")
+                else:
+                    try:
+                        data = await resp.json()
+                        msg = data.get('message', await resp.text())
+                    except:
+                        msg = await resp.text()
+                    await ctx.send(f"[!] Error: {msg} | Status Code: {resp.status}")
 
     @commands.command()
     async def owomanager(self, ctx, action: str):
