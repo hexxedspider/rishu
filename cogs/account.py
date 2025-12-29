@@ -149,10 +149,7 @@ class Account(commands.Cog):
         print(f"[Steal] Info requested for {user}")
 
         if not clone:
-            try:
-                await ctx.send(info_msg)
-            except Exception as e:
-                pass
+            await ctx.send(info_msg)
             return
 
         backup_dir = f"backups/bot_{self.bot.user.id}"
