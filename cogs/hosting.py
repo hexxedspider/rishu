@@ -19,7 +19,7 @@ class Hosting(commands.Cog):
             if name:
                 await self.host_start(ctx, name)
             else:
-                await ctx.send(f"Use `{ctx.prefix}host new {{name}} {{token}}`, `{ctx.prefix}host {{name}}`, or `{ctx.prefix}host list`.")
+                await ctx.send(f"Use `{ctx.prefix}host new {{name}} {{token}}`, `{ctx.prefix}host {{name}}`, `{ctx.prefix}host list`, or `{ctx.prefix}host delete {{name}}`.")
 
     @commands.is_owner()
     @host.command(name="new", aliases=["add"])
@@ -72,8 +72,7 @@ class Hosting(commands.Cog):
             output = "**Hosted Accounts:**\n"
             for acc in config['accounts']:
                 status = "Online" if acc['name'] in running_bots else "Offline"
-                prefix = acc.get('prefix', '!')
-                output += f"- {acc['name']} ({status}) | Prefix: {prefix}\n"
+                output += f"- {acc['name']} ({status})\n"
             await ctx.send(output)
         else:
             await ctx.send("No config.json found.")
@@ -95,6 +94,25 @@ class Hosting(commands.Cog):
                 await __main__.stop_bot(name)
 
             await ctx.send(f"Removed **{name}** from config.")
+        else:
+            await ctx.send("No config.json found.")
+
+    @commands.is_owner()
+    @host.command(name="delete", aliases=["del", "remove"])
+    async def host_delete(self, ctx, name: str):
+        if os.path.exists("config.json"):
+            with open("config.json", "r") as f:
+                config = json.load(f)
+
+            if any(acc['name'] == name for acc in config['accounts']):
+                config['accounts'] = [acc for acc in config['accounts'] if acc['name'] != name]
+
+                with open("config.json", "w") as f:
+                    json.dump(config, f, indent=4)
+
+                await ctx.send(f"Deleted **{name}** from config (bot still running if it was online).")
+            else:
+                await ctx.send(f"Account **{name}** not found in config.")
         else:
             await ctx.send("No config.json found.")
 
